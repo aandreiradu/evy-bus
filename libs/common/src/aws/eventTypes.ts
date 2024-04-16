@@ -1,0 +1,4 @@
+export enum AWS_EVENT_TYPES {
+  AUTH_SIGN_UP = 'AUTH_SIGN_UP',
+  AUTH_SIGN_IN = 'AUTH_SIGN_IN',
+}
