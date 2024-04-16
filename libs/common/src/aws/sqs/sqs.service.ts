@@ -27,14 +27,29 @@ export class SQSService {
   ): SQS {
     if (this.configService.get<string>('NODE_ENV') === 'development') {
       sqsConfig['endpoint'] = 'http://localhost:4566';
+      sqsConfig['region'] = 'eu-central-1';
     }
 
-    console.log('sqsConfig', sqsConfig);
     this.clients[instanceNo] = new SQS(sqsConfig ?? {});
 
     this.logger.log(`SQS ${name} consumer ${instanceNo} initialized`);
 
     return this.clients[instanceNo];
+  }
+
+  async removeEventsFromQueue(
+    sqsQueueURL: string,
+    sqsConsumer: SQS,
+    receiptHandle: string,
+  ) {
+    // for (const event of events) {
+    return sqsConsumer
+      .deleteMessage({
+        QueueUrl: sqsQueueURL,
+        ReceiptHandle: receiptHandle,
+      })
+      .promise();
+    // }
   }
 
   getConsumer(instanceNo: string): SQS {
