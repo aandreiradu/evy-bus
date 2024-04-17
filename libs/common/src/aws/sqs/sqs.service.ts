@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { SQS } from 'aws-sdk';
 import {
+  CreateQueueCommand,
   SQSClient,
   SendMessageCommand,
   SendMessageRequest,
@@ -15,10 +16,29 @@ import { AWS_EVENT_TYPES } from '../eventTypes';
 @Injectable()
 export class SQSService {
   private readonly logger: Logger = new Logger(SQSService.name);
-  private sqsClient = new SQSClient({});
+  private sqsClient: SQSClient | null = null;
   clients: Record<string, SQS> = {};
 
-  constructor(private readonly configService: ConfigService) {}
+  private constructor(private readonly configService: ConfigService) {}
+
+  async createQueue(queuePayload: AWS.SQS.Types.CreateQueueRequest) {
+    try {
+      const createQueuePayload = new CreateQueueCommand({
+        ...queuePayload,
+      });
+
+      const client = this.getClient();
+      const responseAws = await client.send(createQueuePayload);
+      this.logger.log(responseAws);
+
+      return responseAws;
+    } catch (error) {
+      this.logger.error(`Failed to create queue ${queuePayload.QueueName}`);
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException('Failed to create queue');
+    }
+  }
 
   createConsumer(
     instanceNo: number,
@@ -52,7 +72,32 @@ export class SQSService {
     // }
   }
 
+  getClient(): SQSClient {
+    if (this.sqsClient) {
+      return this.sqsClient;
+    }
+
+    if (this.configService.get<string>('NODE_ENV') === 'development') {
+      this.sqsClient = new SQSClient({
+        region: 'eu-central-1',
+        endpoint: 'http://localhost:4566',
+      });
+    }
+    return this.sqsClient;
+  }
+
   getConsumer(instanceNo: string): SQS {
+    if (this.configService.get<string>('NODE_ENV') === 'development') {
+      if (!this.sqsClient) {
+        this.sqsClient = new SQSClient({
+          region: 'eu-central-1',
+          endpoint: 'http://localhost:4566',
+        });
+      } else {
+        console.log('am client');
+      }
+    }
+
     return this.clients[instanceNo] ?? null;
   }
 
