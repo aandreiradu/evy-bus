@@ -17,13 +17,12 @@ export class AuthEventConsumer implements OnApplicationShutdown {
     private readonly configService: ConfigService,
     private readonly sqsService: SQSService,
   ) {
-    const eventConsumerInstances = this.configService.get(
-      'EVENT_CONSUMER_AUTH_INSTANCES',
-    );
-
-    for (let i = 1; i <= eventConsumerInstances; i++) {
-      this.createSqsListener(i);
-    }
+    // const eventConsumerInstances = this.configService.get(
+    //   'EVENT_CONSUMER_AUTH_INSTANCES',
+    // );
+    // for (let i = 1; i <= eventConsumerInstances; i++) {
+    //   this.createSqsListener(i);
+    // }
   }
 
   beforeApplicationShutdown() {
@@ -33,7 +32,7 @@ export class AuthEventConsumer implements OnApplicationShutdown {
     this.#activeConsumer = false;
   }
 
-  onApplicationShutdown(signal: string) {
+  onApplicationShutdown() {
     this.logger.warn(`Closing the Auth consumer...`);
 
     // set a timeout to complete running actions and force shutdown
