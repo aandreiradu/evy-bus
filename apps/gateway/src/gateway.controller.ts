@@ -11,4 +11,14 @@ export class GatewayController {
   async createQueue(@Body() body: any) {
     return this.gatewayService.createQueue(body['accountKey'], body);
   }
+
+  @Post('send-message')
+  async sendMessage(@Body() payload: any) {
+    console.log('body', payload);
+    await this.gatewayService.publishToEventsQueue(payload);
+
+    return {
+      message: 'Message received successfully',
+    };
+  }
 }
