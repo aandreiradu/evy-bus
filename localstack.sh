@@ -74,3 +74,11 @@ QUEUE_AUTH_DLQ_ARN=$(guess_queue_arn_from_name auth-dlq)
 QUEUE_AUTH_URL=$(create_queue auth $QUEUE_AUTH_DLQ_ARN)
 QUEUE_AUTH_ARN=$(guess_queue_arn_from_name auth)
 
+
+
+echo "Creating events queue"
+QUEUE_EVENTS_DLQ_URL=$(create_dead_letter_queue events-dlq)
+QUEUE_EVENTS_DLQ_ARN=$(guess_queue_arn_from_name events-dlq)
+
+QUEUE_EVENTS_URL=$(create_queue events $QUEUE_EVENTS_DLQ_ARN)
+QUEUE_EVENTS_ARN=$(guess_queue_arn_from_name events)
