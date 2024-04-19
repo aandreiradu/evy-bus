@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -7,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { SQS } from 'aws-sdk';
 import {
   CreateQueueCommand,
+  GetQueueUrlCommand,
   SQSClient,
   SendMessageCommand,
   SendMessageRequest,
@@ -17,9 +20,17 @@ import { AWS_EVENT_TYPES } from '../eventTypes';
 export class SQSService {
   private readonly logger: Logger = new Logger(SQSService.name);
   private sqsClient: SQSClient | null = null;
+  private sqs: SQS | null = null;
   clients: Record<string, SQS> = {};
 
-  private constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) {
+    if (!this.sqsClient) this.sqsClient = this.getClient();
+
+    this.sqs = new SQS({
+      region: 'eu-central-1',
+      endpoint: 'http://localhost:4566',
+    });
+  }
 
   async createQueue(queuePayload: AWS.SQS.Types.CreateQueueRequest) {
     try {
@@ -93,12 +104,10 @@ export class SQSService {
           region: 'eu-central-1',
           endpoint: 'http://localhost:4566',
         });
-      } else {
-        console.log('am client');
       }
     }
 
-    return this.clients[instanceNo] ?? null;
+    return this.clients[instanceNo];
   }
 
   async sendMessage(
@@ -121,7 +130,6 @@ export class SQSService {
           },
         };
       }
-
       const command = new SendMessageCommand(commandPayload);
       const response = await this.sqsClient.send(command);
 
@@ -137,6 +145,66 @@ export class SQSService {
       throw new InternalServerErrorException(
         'Failed to publish message to SQS',
       );
+    }
+  }
+
+  async getQueueAttributes(queueName: string) {
+    try {
+      const queueURL = await this.getQueueURL(queueName);
+
+      const getQueueAttributesParams: SQS.Types.GetQueueAttributesRequest = {
+        QueueUrl: queueURL,
+        AttributeNames: ['All'],
+      };
+
+      const queueURLResponse = await this.sqs
+        .getQueueAttributes(getQueueAttributesParams)
+        .promise();
+      console.log('queueURLResponse', queueURLResponse);
+
+      if (!queueURLResponse) {
+        return {
+          isSuccess: true,
+          message: `No queue attributes found for queue ${queueURL}`,
+        };
+      }
+
+      return {
+        isSuccess: true,
+        message: 'Queue attributes found',
+        attributes: queueURLResponse.Attributes,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+
+      this.logger.error(
+        `Failed to get queue attributes  for queue ${queueName}`,
+      );
+      this.logger.error(JSON.stringify(error));
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async getQueueURL(queueName: string) {
+    try {
+      const getQueueURLParams: SQS.Types.GetQueueUrlRequest = {
+        QueueName: queueName,
+      };
+
+      const queueURLResponse = await this.sqs
+        .getQueueUrl(getQueueURLParams)
+        .promise();
+      console.log('queueAttributes', queueURLResponse);
+
+      if (!queueURLResponse?.QueueUrl) {
+        throw new BadRequestException('Queue URL not found');
+      }
+
+      return queueURLResponse.QueueUrl;
+    } catch (error) {
+      this.logger.error(`Failed to get queue URL for queue ${queueName}`);
+      this.logger.error(JSON.stringify(error));
+      throw new InternalServerErrorException();
     }
   }
 }
