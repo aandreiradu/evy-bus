@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { SQSService } from '@app/common/aws/sqs/sqs.service';
 import { AuthEventConsumer } from './consumers/auth.consumer';
+import { AuthRepository } from './dto/auth.repository';
+import { DynamoDBService } from '@app/common/aws/dynamodb/dynamodb.service';
 
 @Module({
   imports: [],
-  controllers: [AuthController],
-  providers: [AuthService, SQSService, AuthEventConsumer],
-  exports: [AuthService],
+  providers: [
+    AuthService,
+    SQSService,
+    AuthEventConsumer,
+    AuthRepository,
+    DynamoDBService,
+  ],
+  exports: [AuthService, DynamoDBService],
 })
 export class AuthModule {}
