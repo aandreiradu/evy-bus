@@ -49,6 +49,25 @@ guess_topic_arn_from_name() {
     echo "arn:aws:sns:${AWS_REGION}:${LOCALSTACK_DUMMY_ID}:$TOPIC_NAME"
 }
 
+create_dynamodb_table() {
+    local TABLE_NAME_TO_CREATE=$1
+    
+    awslocal --endpoint-url=http://${LOCALSTACK_HOST}:4566 dynamodb describe-table --table-name ${TABLE_NAME_TO_CREATE} || \
+      awslocal --endpoint-url=http://${LOCALSTACK_HOST}:4566 dynamodb create-table --table-name ${TABLE_NAME_TO_CREATE} --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST
+}
+
+create_dynamo_secondary_index() {
+    local TABLE_NAME_TO_UPDATE=$1
+    local COLUMN_NAME=$2
+    local INDEX_NAME="${COLUMN_NAME}_index"
+    local INDEX_EXISTS=$(awslocal --endpoint-url=http://${LOCALSTACK_HOST}:4566 dynamodb describe-table --table-name ${TABLE_NAME_TO_UPDATE} | jq -r ".Table.GlobalSecondaryIndexes[] | select(.IndexName == \"${INDEX_NAME}\")")
+    if [ -n "$INDEX_EXISTS" ]; then
+        echo "Index ${INDEX_NAME} already exists"
+        return
+    fi
+    awslocal --endpoint-url=http://${LOCALSTACK_HOST}:4566 dynamodb update-table --table-name ${TABLE_NAME_TO_UPDATE} --attribute-definitions --attribute-definitions AttributeName=${COLUMN_NAME},AttributeType=S --global-secondary-index-updates "[{\"Create\":{\"IndexName\": \"${INDEX_NAME}\",\"KeySchema\":[{\"AttributeName\":\"${COLUMN_NAME}\",\"KeyType\":\"HASH\"}],\"ProvisionedThroughput\": {\"ReadCapacityUnits\": 10, \"WriteCapacityUnits\": 5},\"Projection\":{\"ProjectionType\":\"ALL\"}}}]" --billing-mode PAY_PER_REQUEST
+}
+
 create_s3_bucket() { 
     local BUCKET_NAME=$1
     echo "creating bucket" "$BUCKET_NAME"
@@ -82,3 +101,15 @@ QUEUE_EVENTS_DLQ_ARN=$(guess_queue_arn_from_name events-dlq)
 
 QUEUE_EVENTS_URL=$(create_queue events $QUEUE_EVENTS_DLQ_ARN)
 QUEUE_EVENTS_ARN=$(guess_queue_arn_from_name events)
+
+
+echo "Creating tables"
+
+echo "Creating Queue Keys table"
+QUEUE_KEYS_TABLE_URL=$(create_dynamodb_table queueKeys)
+
+echo "Creating Queue keys secondary index"
+KEY_IDX=$(create_dynamo_secondary_index queueKeys key)
+
+echo "Creating Queue Keys table"
+USER_TABLE_URL=$(create_dynamodb_table users)
