@@ -7,6 +7,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { SQSService } from '@app/common/aws';
 import { GatewayEventsConsumer } from './gateway.consumer';
 import { SqsModule } from '@ssut/nestjs-sqs';
+import { AuthModule } from 'apps/auth/src/auth.module';
 @Module({
   imports: [
     LoggerModule.forRoot(),
@@ -22,12 +23,12 @@ import { SqsModule } from '@ssut/nestjs-sqs';
             {
               name: 'events',
               region: 'eu-central-1',
-              instances: 2,
+              instances: 1,
               attributeNames: ['All'],
               queueUrl: configService.get<string>('AWS_SQS_EVENTS_QUEUE_URL'),
               batchSize: 1,
               pollingWaitTimeMs: 1000,
-              waitTimeSeconds: 20,
+              waitTimeSeconds: 10,
               visibilityTimeout: 120,
             },
           ],
@@ -35,6 +36,7 @@ import { SqsModule } from '@ssut/nestjs-sqs';
       },
       inject: [ConfigService],
     }),
+    AuthModule,
   ],
   controllers: [GatewayController],
   providers: [GatewayService, SQSService, GatewayEventsConsumer],

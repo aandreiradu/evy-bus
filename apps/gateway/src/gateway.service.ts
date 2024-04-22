@@ -5,6 +5,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AuthService } from 'apps/auth/src/auth.service';
+import { AuthenticateUserDTO } from 'apps/auth/src/dto/authenticate-user.dto';
+import { CreateUserDTO } from 'apps/auth/src/dto/create-user.dto';
 
 @Injectable()
 export class GatewayService {
@@ -13,6 +16,7 @@ export class GatewayService {
   constructor(
     private readonly sqsService: SQSService,
     private readonly configSerivce: ConfigService,
+    private readonly authService: AuthService,
   ) {}
 
   createQueue(
@@ -54,5 +58,13 @@ export class GatewayService {
 
       throw new InternalServerErrorException();
     }
+  }
+
+  async createUser(createUserDTO: CreateUserDTO) {
+    return this.authService.createUser(createUserDTO);
+  }
+
+  async authenticateUser(authenticateUserDTO: AuthenticateUserDTO) {
+    return this.authService.authenticateUser(authenticateUserDTO);
   }
 }
