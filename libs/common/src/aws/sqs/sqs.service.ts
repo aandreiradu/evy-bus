@@ -9,7 +9,6 @@ import { ConfigService } from '@nestjs/config';
 import { SQS } from 'aws-sdk';
 import {
   CreateQueueCommand,
-  GetQueueUrlCommand,
   SQSClient,
   SendMessageCommand,
   SendMessageRequest,
@@ -114,6 +113,7 @@ export class SQSService {
     queueURL: string,
     message: any,
     eventType?: AWS_EVENT_TYPES,
+    isFifo = false,
   ) {
     try {
       const commandPayload: SendMessageRequest = {
@@ -130,6 +130,12 @@ export class SQSService {
           },
         };
       }
+
+      if (isFifo) {
+        commandPayload.MessageGroupId = 'group_FTOS';
+        commandPayload.MessageDeduplicationId = String(Date.now());
+      }
+
       const command = new SendMessageCommand(commandPayload);
       const response = await this.sqsClient.send(command);
 
@@ -160,7 +166,6 @@ export class SQSService {
       const queueURLResponse = await this.sqs
         .getQueueAttributes(getQueueAttributesParams)
         .promise();
-      console.log('queueURLResponse', queueURLResponse);
 
       if (!queueURLResponse) {
         return {
@@ -194,7 +199,6 @@ export class SQSService {
       const queueURLResponse = await this.sqs
         .getQueueUrl(getQueueURLParams)
         .promise();
-      console.log('queueAttributes', queueURLResponse);
 
       if (!queueURLResponse?.QueueUrl) {
         throw new BadRequestException('Queue URL not found');
