@@ -2,11 +2,16 @@ import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SQSService } from '@app/common/aws/sqs/sqs.service';
 import { AuthEventConsumer } from './consumers/auth.consumer';
-import { AuthRepository } from './dto/auth.repository';
+import { AuthRepository } from './auth.repository';
 import { DynamoDBService } from '@app/common/aws/dynamodb/dynamodb.service';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  imports: [],
+  imports: [
+    JwtModule.register({
+      global: true,
+    }),
+  ],
   providers: [
     AuthService,
     SQSService,
