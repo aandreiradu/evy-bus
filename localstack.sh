@@ -105,11 +105,11 @@ QUEUE_EVENTS_ARN=$(guess_queue_arn_from_name events)
 
 echo "Creating tables"
 
-echo "Creating Queue Keys table"
-QUEUE_KEYS_TABLE_URL=$(create_dynamodb_table queueKeys)
+echo "Creating Queues table"
+QUEUE_KEYS_TABLE_URL=$(create_dynamodb_table queues)
 
 echo "Creating Queue keys secondary index"
-KEY_IDX=$(create_dynamo_secondary_index queueKeys key)
+KEY_IDX=$(create_dynamo_secondary_index queues key)
 
 echo "Creating Queue Keys table"
 USER_TABLE_URL=$(create_dynamodb_table users)
