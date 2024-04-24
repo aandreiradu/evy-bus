@@ -5,6 +5,7 @@ import { CreateUserDTO } from './dto/create-user.dto';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
 import {
+  QueueToken,
   SaveQueueTokenURLArgs,
   UserQueueTokensResponse,
 } from '@app/common/constants/types';
@@ -76,7 +77,7 @@ export class AuthRepository {
       .promise();
   }
 
-  async getExistingQueueToken(userId: string) {
+  async getExistingQueueToken(userId: string): Promise<QueueToken[]> {
     const dbClient = this.dynamoDBService.getClient();
 
     const existingQueuesTokens = await dbClient
@@ -85,17 +86,21 @@ export class AuthRepository {
         Key: {
           id: userId,
         },
-        ProjectionExpression: 'queueTokens, id',
+        ProjectionExpression: 'queuesTokens',
       })
       .promise();
 
-    console.log({ existingQueuesTokens });
-
-    return (existingQueuesTokens?.Item as UserQueueTokensResponse) || null;
+    return (
+      (existingQueuesTokens &&
+        Object.keys(existingQueuesTokens?.Item).length &&
+        (JSON.parse(
+          existingQueuesTokens?.Item?.queuesTokens,
+        ) as QueueToken[])) ||
+      null
+    );
   }
 
   async saveQueueTokens({ userId, queueTokens }: SaveQueueTokenURLArgs) {
-    console.log('params', { userId, queueTokens });
     const dbClient = this.dynamoDBService.getClient();
 
     await dbClient
