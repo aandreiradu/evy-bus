@@ -8,6 +8,7 @@ import { SQSService } from '@app/common/aws';
 import { GatewayEventsConsumer } from './gateway.consumer';
 import { SqsModule } from '@ssut/nestjs-sqs';
 import { AuthModule } from 'apps/auth/src/auth.module';
+import { UtilsService } from '@app/common/utils';
 @Module({
   imports: [
     LoggerModule.forRoot(),
@@ -39,6 +40,6 @@ import { AuthModule } from 'apps/auth/src/auth.module';
     AuthModule,
   ],
   controllers: [GatewayController],
-  providers: [GatewayService, SQSService, GatewayEventsConsumer],
+  providers: [GatewayService, SQSService, GatewayEventsConsumer, UtilsService],
 })
 export class GatewayModule {}

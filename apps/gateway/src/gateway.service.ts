@@ -1,4 +1,6 @@
 import { SQSService } from '@app/common/aws';
+import { CreateQueueArgs } from '@app/common/constants/types';
+import { UtilsService } from '@app/common/utils';
 import {
   Injectable,
   InternalServerErrorException,
@@ -17,18 +19,35 @@ export class GatewayService {
     private readonly sqsService: SQSService,
     private readonly configSerivce: ConfigService,
     private readonly authService: AuthService,
+    private readonly utilsService: UtilsService,
   ) {}
 
-  createQueue(
-    accountKey: string,
-    queuePayload: AWS.SQS.Types.CreateQueueRequest,
-  ) {
+  async createQueue(queuePayload: CreateQueueArgs) {
     try {
-      const responseAwsQueue = this.sqsService.createQueue({
-        QueueName: 'test-ack-2',
+      const responseAwsQueue = await this.sqsService.createQueue({
+        QueueName: queuePayload.QueueName,
+        tags: queuePayload.tags,
+        Attributes: queuePayload.Attributes,
       });
 
-      return responseAwsQueue;
+      const queueToken = this.utilsService.generateQueueToken();
+
+      console.log('passing this to authseervice', {
+        userId: queuePayload.userId,
+        queueToken,
+        queueURL: responseAwsQueue.QueueUrl,
+      });
+
+      await this.authService.saveQueueTokens({
+        userId: queuePayload.userId,
+        queueToken,
+        queueURL: responseAwsQueue.QueueUrl,
+      });
+
+      return {
+        isSuccess: true,
+        queueToken: queueToken,
+      };
     } catch (error) {
       if (error.name === 'AWS.SimpleQueueService.QueueNameExists') {
         this.logger.warn(`Queue ${queuePayload.QueueName} already exists.`);
@@ -36,7 +55,8 @@ export class GatewayService {
       }
 
       this.logger.error(`Failed to create queue`);
-      throw new InternalServerErrorException(JSON.stringify(error));
+      console.error(error);
+      throw new InternalServerErrorException('Failed to create queue');
     }
   }
 

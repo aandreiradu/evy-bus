@@ -2,12 +2,13 @@ import {
   Body,
   Controller,
   Post,
+  Req,
   Res,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import { GatewayService } from './gateway.service';
-import { AccountKeyGuard } from '@app/common/guards';
+import { AccessTokenGuard } from '@app/common/guards';
 import { v4 as uuidv4 } from 'uuid';
 import {
   createUserSchema,
@@ -20,6 +21,8 @@ import {
 } from 'apps/auth/src/dto/authenticate-user.dto';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
+import { CreateQueueDTO, createQueueSchema } from './dto/create-queue.dto';
+import { AuthenticatedRequest } from '@app/common/constants/types';
 @Controller()
 export class GatewayController {
   constructor(
@@ -53,9 +56,16 @@ export class GatewayController {
   }
 
   @Post('create-queue')
-  @UseGuards(AccountKeyGuard)
-  async createQueue(@Body() body: any) {
-    return this.gatewayService.createQueue(body['accountKey'], body);
+  @UsePipes(new ZodValidationPipe(createQueueSchema))
+  @UseGuards(AccessTokenGuard)
+  async createQueue(
+    @Req() req: AuthenticatedRequest,
+    @Body() createQueueDTO: CreateQueueDTO,
+  ) {
+    return this.gatewayService.createQueue({
+      userId: req['userId'],
+      QueueName: createQueueDTO['QueueName'],
+    });
   }
 
   @Post('send-message')
