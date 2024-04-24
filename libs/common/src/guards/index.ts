@@ -1,2 +1,2 @@
 export * from './queueKey.guard';
-export * from './accountKey.guard';
+export * from './accessToken.guard';
