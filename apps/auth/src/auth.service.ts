@@ -147,11 +147,8 @@ export class AuthService {
       const existingUserQueuesTokens =
         await this.authRepository.getExistingQueueToken(userId);
 
-      console.log('aici', existingUserQueuesTokens);
-
       let queueTokens: QueueToken[] = [];
-      if (!existingUserQueuesTokens.queuesTokens) {
-        console.log('User doesnt have queue tokens...');
+      if (!existingUserQueuesTokens || !existingUserQueuesTokens?.length) {
         queueTokens = [
           {
             queueToken,
@@ -159,8 +156,8 @@ export class AuthService {
           },
         ];
       } else {
-        console.log('User has queue tokens...');
-        queueTokens = existingUserQueuesTokens.queuesTokens;
+        queueTokens = existingUserQueuesTokens;
+        queueTokens.push({ queueToken, queueURL });
       }
 
       await this.authRepository.saveQueueTokens({ userId, queueTokens });
