@@ -35,6 +35,9 @@ export class SQSService {
     try {
       const createQueuePayload = new CreateQueueCommand({
         ...queuePayload,
+        Attributes: {
+          ReceiveMessageWaitTimeSeconds: '20', // enable long-pooling by default
+        },
       });
 
       const client = this.getClient();

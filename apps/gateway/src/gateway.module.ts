@@ -29,7 +29,7 @@ import { UtilsService } from '@app/common/utils';
               queueUrl: configService.get<string>('AWS_SQS_EVENTS_QUEUE_URL'),
               batchSize: 1,
               pollingWaitTimeMs: 1000,
-              waitTimeSeconds: 10,
+              waitTimeSeconds: 20,
               visibilityTimeout: 120,
             },
           ],

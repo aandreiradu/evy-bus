@@ -32,12 +32,6 @@ export class GatewayService {
 
       const queueToken = this.utilsService.generateQueueToken();
 
-      console.log('passing this to authseervice', {
-        userId: queuePayload.userId,
-        queueToken,
-        queueURL: responseAwsQueue.QueueUrl,
-      });
-
       await this.authService.saveQueueTokens({
         userId: queuePayload.userId,
         queueToken,
