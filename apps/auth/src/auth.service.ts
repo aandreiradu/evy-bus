@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -11,6 +12,7 @@ import { AuthenticateUserDTO } from './dto/authenticate-user.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { QueueToken } from '@app/common/constants/types';
 
 @Injectable()
 export class AuthService {
@@ -24,13 +26,13 @@ export class AuthService {
 
   async createUser(createUserDTO: CreateUserDTO) {
     try {
-      // const existingUser = await this.authRepository.getUserByEmail(
-      //   createUserDTO.email,
-      // );
+      const existingUser = await this.authRepository.getUserByEmail(
+        createUserDTO.email,
+      );
 
-      // if (existingUser) {
-      //   throw new ConflictException('Another account is using this email');
-      // }
+      if (existingUser) {
+        throw new ConflictException('Another account is using this email');
+      }
 
       await this.authRepository.createUser(createUserDTO);
 
@@ -58,7 +60,7 @@ export class AuthService {
         throw new BadRequestException('Invalid email or password');
       }
 
-      const { password: hashPasswords, email, id } = userAccount;
+      const { password: hashPasswords, id: userId } = userAccount;
 
       const passwordMatch = await this.comparePasswords(
         authenticateUserDTO.password,
@@ -69,15 +71,17 @@ export class AuthService {
         throw new BadRequestException('Invalid email or password');
       }
 
-      const { accessToken, refreshToken } = await this.generateJWTToken(email);
+      const { accessToken, refreshToken } = await this.generateJWTToken(userId);
 
-      await this.authRepository.saveRefreshToken(id, refreshToken);
+      await this.authRepository.saveRefreshToken(userId, refreshToken);
 
       return {
         accessToken,
         refreshToken,
       };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
+
       this.logger.error(
         `Failed to get user by email ${authenticateUserDTO.email}`,
       );
@@ -104,19 +108,19 @@ export class AuthService {
   }
 
   async generateJWTToken(
-    email: string,
+    userId: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     try {
       const [accessToken, refreshToken] = await Promise.all([
         this.jwtService.signAsync(
-          { email },
+          { userId },
           {
             secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
             expiresIn: '1h',
           },
         ),
         this.jwtService.signAsync(
-          { email },
+          { userId },
           {
             secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
             expiresIn: '30d',
@@ -129,12 +133,45 @@ export class AuthService {
         refreshToken,
       };
     } catch (error) {
-      this.logger.error(`Failed to generate JWT token for email ${email}`);
+      this.logger.error(`Failed to generate JWT token for userId ${userId}`);
       this.logger.error(JSON.stringify(error));
 
       throw new InternalServerErrorException(
         `Authentication failed. Please try again later`,
       );
+    }
+  }
+
+  async saveQueueTokens({ userId, queueToken, queueURL }) {
+    try {
+      const existingUserQueuesTokens =
+        await this.authRepository.getExistingQueueToken(userId);
+
+      console.log('aici', existingUserQueuesTokens);
+
+      let queueTokens: QueueToken[] = [];
+      if (!existingUserQueuesTokens.queuesTokens) {
+        console.log('User doesnt have queue tokens...');
+        queueTokens = [
+          {
+            queueToken,
+            queueURL,
+          },
+        ];
+      } else {
+        console.log('User has queue tokens...');
+        queueTokens = existingUserQueuesTokens.queuesTokens;
+      }
+
+      await this.authRepository.saveQueueTokens({ userId, queueTokens });
+    } catch (error) {
+      this.logger.error(
+        `Failed to save queue tokens for userId ${userId}; queueToken: ${queueToken}; queueURL : ${queueURL}`,
+      );
+      this.logger.error(error);
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException();
     }
   }
 }

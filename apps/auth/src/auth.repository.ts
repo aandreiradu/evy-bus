@@ -4,6 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
+import {
+  SaveQueueTokenURLArgs,
+  UserQueueTokensResponse,
+} from '@app/common/constants/types';
 
 @Injectable()
 export class AuthRepository {
@@ -67,6 +71,42 @@ export class AuthRepository {
         UpdateExpression: 'set refreshToke = :refreshToken',
         ExpressionAttributeValues: {
           ':refreshToken': refreshToken,
+        },
+      })
+      .promise();
+  }
+
+  async getExistingQueueToken(userId: string) {
+    const dbClient = this.dynamoDBService.getClient();
+
+    const existingQueuesTokens = await dbClient
+      .get({
+        TableName: this.configService.get('AWS_DYNAMODB_USERS_TABLE_NAME'),
+        Key: {
+          id: userId,
+        },
+        ProjectionExpression: 'queueTokens, id',
+      })
+      .promise();
+
+    console.log({ existingQueuesTokens });
+
+    return (existingQueuesTokens?.Item as UserQueueTokensResponse) || null;
+  }
+
+  async saveQueueTokens({ userId, queueTokens }: SaveQueueTokenURLArgs) {
+    console.log('params', { userId, queueTokens });
+    const dbClient = this.dynamoDBService.getClient();
+
+    await dbClient
+      .update({
+        TableName: this.configService.get('AWS_DYNAMODB_USERS_TABLE_NAME'),
+        Key: {
+          id: userId,
+        },
+        UpdateExpression: 'set queuesTokens = :queuesTokens',
+        ExpressionAttributeValues: {
+          ':queuesTokens': JSON.stringify(queueTokens),
         },
       })
       .promise();
