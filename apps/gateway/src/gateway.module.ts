@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { GatewayController } from './gateway.controller';
-import { GatewayService } from './gateway.service';
-
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { SQSService } from '@app/common/aws';
@@ -9,6 +7,8 @@ import { GatewayEventsConsumer } from './gateway.consumer';
 import { SqsModule } from '@ssut/nestjs-sqs';
 import { AuthModule } from 'apps/auth/src/auth.module';
 import { UtilsService } from '@app/common/utils';
+import { QueueService } from '@app/common/queue/queue.service';
+import { QueueRepository } from '@app/common/queue/queue.repository';
 @Module({
   imports: [
     LoggerModule.forRoot(),
@@ -40,6 +40,12 @@ import { UtilsService } from '@app/common/utils';
     AuthModule,
   ],
   controllers: [GatewayController],
-  providers: [GatewayService, SQSService, GatewayEventsConsumer, UtilsService],
+  providers: [
+    SQSService,
+    GatewayEventsConsumer,
+    UtilsService,
+    QueueService,
+    QueueRepository,
+  ],
 })
 export class GatewayModule {}

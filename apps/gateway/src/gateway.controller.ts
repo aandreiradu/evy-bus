@@ -1,13 +1,13 @@
 import {
   Body,
   Controller,
+  InternalServerErrorException,
   Post,
   Req,
   Res,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
-import { GatewayService } from './gateway.service';
 import { AccessTokenGuard } from '@app/common/guards';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -23,17 +23,20 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { CreateQueueDTO, createQueueSchema } from './dto/create-queue.dto';
 import { AuthenticatedRequest } from '@app/common/constants/types';
+import { QueueService } from '@app/common/queue/queue.service';
+import { AuthService } from 'apps/auth/src/auth.service';
 @Controller()
 export class GatewayController {
   constructor(
-    private readonly gatewayService: GatewayService,
+    private readonly queueService: QueueService,
+    private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
 
   @Post('sign-up')
   @UsePipes(new ZodValidationPipe(createUserSchema))
   async createUser(@Body() createUserDTO: CreateUserDTO) {
-    return this.gatewayService.createUser(createUserDTO);
+    return this.authService.createUser(createUserDTO);
   }
 
   @Post('sign-in')
@@ -43,7 +46,7 @@ export class GatewayController {
     @Res() response: Response,
   ) {
     const { accessToken, refreshToken } =
-      await this.gatewayService.authenticateUser(authenticateUserDTO);
+      await this.authService.authenticateUser(authenticateUserDTO);
 
     const cookieName = this.configService.get('JWT_REFRESH_TOKEN_COOKIE_NAME');
 
@@ -62,17 +65,26 @@ export class GatewayController {
     @Req() req: AuthenticatedRequest,
     @Body() createQueueDTO: CreateQueueDTO,
   ) {
-    return this.gatewayService.createQueue({
+    const createQueueResponse = await this.queueService.createQueue({
       userId: req['userId'],
       QueueName: createQueueDTO['QueueName'],
     });
+
+    if (!createQueueResponse.isSuccess) {
+      throw new InternalServerErrorException(createQueueResponse);
+    }
+
+    return {
+      ...createQueueResponse,
+      message: 'Queue created successfully',
+    };
   }
 
   @Post('send-message')
   async sendMessage(@Body() payload: any) {
     const CID = uuidv4();
 
-    await this.gatewayService.publishToEventsQueue({
+    await this.queueService.publishToEventsQueue({
       ...payload,
       CorrelationId: CID,
     });
