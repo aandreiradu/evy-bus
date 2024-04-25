@@ -9,6 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { SQS } from 'aws-sdk';
 import {
   CreateQueueCommand,
+  GetQueueAttributesCommand,
+  QueueAttributeName,
   SQSClient,
   SendMessageCommand,
   SendMessageRequest,
@@ -31,18 +33,50 @@ export class SQSService {
     });
   }
 
+  async createDLQ(queueName: string) {
+    try {
+      const createQueueCommand = new CreateQueueCommand({
+        QueueName: queueName,
+      });
+
+      const dlqURL = await this.sqsClient.send(createQueueCommand);
+
+      return dlqURL?.QueueUrl || null;
+    } catch (error) {
+      this.logger.error(`Failed to create DLQ ${queueName}`);
+      this.logger.error(error);
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException('Failed to create DLQ');
+    }
+  }
+
   async createQueue(queuePayload: AWS.SQS.Types.CreateQueueRequest) {
     try {
+      const maxReceiveCount = +queuePayload?.Attributes?.maxReceiveCount || 5;
+      const dlqURL = await this.createDLQ(queuePayload.QueueName + 'DLQ');
+
+      if (!dlqURL) {
+        throw new InternalServerErrorException('Failed to create DLQ');
+      }
+
+      const dlqAttributes = await this.getQueueAttributesByURL(dlqURL);
+
+      const { QueueArn: DLQArn } = dlqAttributes.Attributes;
+
       const createQueuePayload = new CreateQueueCommand({
         ...queuePayload,
         Attributes: {
           ReceiveMessageWaitTimeSeconds: '20', // enable long-pooling by default
+          RedrivePolicy: JSON.stringify({
+            deadLetterTargetArn: DLQArn,
+            maxReceiveCount: maxReceiveCount.toString(), // Convert to string
+          }),
         },
       });
 
       const client = this.getClient();
       const responseAws = await client.send(createQueuePayload);
-      this.logger.log(responseAws);
 
       return responseAws;
     } catch (error) {
@@ -157,7 +191,58 @@ export class SQSService {
     }
   }
 
-  async getQueueAttributes(queueName: string) {
+  async getQueueAttributesByURL(
+    queueURL: string,
+    attributes?: QueueAttributeName[],
+  ) {
+    try {
+      const attributesCommand = new GetQueueAttributesCommand({
+        QueueUrl: queueURL,
+        AttributeNames: ['QueueArn'],
+      });
+
+      const queueAttributesResponse = await this.sqsClient.send(
+        attributesCommand,
+      );
+
+      if (
+        !queueAttributesResponse ||
+        queueAttributesResponse.$metadata.httpStatusCode !== 200 ||
+        !queueAttributesResponse?.Attributes
+      ) {
+        this.logger.error(
+          `Unexpected response from get queue attributes for queueURL ${queueURL}`,
+        );
+        this.logger.error(
+          `Command payload ${JSON.stringify({
+            QueueUrl: queueURL,
+            AttributeNames: attributes ? attributes : ['All'],
+          })}`,
+        );
+        this.logger.error(JSON.stringify(queueAttributesResponse));
+
+        throw new InternalServerErrorException(
+          'Failed to get queue attributes',
+        );
+      }
+
+      return queueAttributesResponse;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+
+      this.logger.error(
+        `Failed to get queue attributes for URL ${queueURL}; attributes; ${JSON.stringify(
+          attributes,
+        )}`,
+      );
+      this.logger.error(error);
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException('Failed to get queue attributes');
+    }
+  }
+
+  async getQueueAttributesByName(queueName: string) {
     try {
       const queueURL = await this.getQueueURL(queueName);
 
