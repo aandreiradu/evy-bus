@@ -111,10 +111,9 @@ USER_TABLE_URL=$(create_dynamodb_table users)
 echo "Creating users secondary index"
 EMAIL=$(create_dynamo_secondary_index users email)
 
+echo "Creating Queues table"
+QUEUE_KEYS_TABLE_URL=$(create_dynamodb_table queues)
 
-# echo "Creating Queues table"
-# QUEUE_KEYS_TABLE_URL=$(create_dynamodb_table queues)
-
-# echo "Creating Queue keys secondary index"
-# KEY_IDX=$(create_dynamo_secondary_index queues key)
+echo "Creating Queue keys secondary index"
+KEY_IDX1=$(create_dynamo_secondary_index queues queueKey)
 

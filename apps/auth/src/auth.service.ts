@@ -171,4 +171,17 @@ export class AuthService {
       throw new InternalServerErrorException();
     }
   }
+
+  async getQueueURLByToken(token: string, userId: string) {
+    try {
+    } catch (error) {
+      this.logger.error(
+        `Failed to get queue url for token ${token}; userId ${userId}`,
+      );
+      this.logger.error(error);
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException('Failed to get Queue URL');
+    }
+  }
 }
