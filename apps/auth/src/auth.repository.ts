@@ -4,11 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
-import {
-  QueueToken,
-  SaveQueueTokenURLArgs,
-  UserQueueTokensResponse,
-} from '@app/common/constants/types';
+import { QueueToken, SaveQueueTokenURLArgs } from '@app/common/constants/types';
 
 @Injectable()
 export class AuthRepository {
@@ -69,7 +65,7 @@ export class AuthRepository {
         Key: {
           id: userId,
         },
-        UpdateExpression: 'set refreshToke = :refreshToken',
+        UpdateExpression: 'set refreshToken = :refreshToken',
         ExpressionAttributeValues: {
           ':refreshToken': refreshToken,
         },
