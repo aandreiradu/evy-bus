@@ -2,6 +2,7 @@ import { Request } from 'express';
 
 export interface AuthenticatedRequest extends Request {
   userId: string;
+  queueURL: string;
 }
 
 export interface CreateQueueArgs extends AWS.SQS.Types.CreateQueueRequest {
