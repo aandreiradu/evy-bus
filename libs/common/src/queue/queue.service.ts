@@ -69,7 +69,7 @@ export class QueueService {
     }
   }
 
-  async publishToEventsQueue(message: any): Promise<void> {
+  async sendMessage(message: any): Promise<void> {
     try {
       const eventsQueueURL = this.configService.get<string>(
         'AWS_SQS_EVENTS_QUEUE_URL',
@@ -83,6 +83,24 @@ export class QueueService {
       this.logger.error(
         `Failed to publish to events queue message ${JSON.stringify(message)}`,
       );
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async getQueueUrlByToken(token: string, userId: string) {
+    try {
+      const queueURLQuery = await this.queueRepository.getQueueUrlByToken(
+        token,
+      );
+
+      return queueURLQuery;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get queue for token ${token}; userId ${userId}`,
+      );
+      this.logger.error(error);
       this.logger.error(JSON.stringify(error));
 
       throw new InternalServerErrorException();

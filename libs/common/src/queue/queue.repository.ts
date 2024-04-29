@@ -15,15 +15,33 @@ export class QueueRepository {
     this.dbClient = this.dynamoDbService.getClient();
   }
 
-  // async getQueueByNameAndUserId(queueName : string, userId : string) {
-  //   return this.dbClient
-  //   .get({
-  //     TableName : this.configService.get('AWS_DYNAMODB_QUEUES_TABLE_NAME'),
-  //     Key : {
-  //       queueURL :
-  //     }
-  //   })
-  // }
+  async getQueueUrlByToken(
+    token: string,
+  ): Promise<{ queueURL: string; queueUserId: string } | null> {
+    console.log({ token });
+    const dbClient = this.dynamoDbService.getClient();
+
+    const queueURLQuery = await dbClient
+      .query({
+        TableName: this.configService.get('AWS_DYNAMODB_QUEUES_TABLE_NAME'),
+        IndexName: 'queueToken_index',
+        KeyConditionExpression: 'queueToken = :queueToken',
+        ExpressionAttributeValues: {
+          ':queueToken': token,
+        },
+        ProjectionExpression: 'queueURL, userId',
+      })
+      .promise();
+
+    if (!queueURLQuery.Items.length) return null;
+
+    const { userId: queueUserId, queueURL } = queueURLQuery.Items[0] ?? {};
+
+    return {
+      queueURL,
+      queueUserId,
+    };
+  }
 
   async saveQueueTokens(args: SaveQueueArgs) {
     await this.dbClient
