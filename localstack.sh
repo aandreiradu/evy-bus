@@ -115,5 +115,5 @@ echo "Creating Queues table"
 QUEUE_KEYS_TABLE_URL=$(create_dynamodb_table queues)
 
 echo "Creating Queue keys secondary index"
-KEY_IDX1=$(create_dynamo_secondary_index queues queueKey)
+KEY_IDX1=$(create_dynamo_secondary_index queues queueToken)
 
