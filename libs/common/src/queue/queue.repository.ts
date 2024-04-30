@@ -15,10 +15,12 @@ export class QueueRepository {
     this.dbClient = this.dynamoDbService.getClient();
   }
 
-  async getQueueUrlByToken(
-    token: string,
-  ): Promise<{ queueURL: string; queueUserId: string } | null> {
-    console.log({ token });
+  async getQueueUrlByToken(token: string): Promise<{
+    queueURL: string;
+    queueUserId: string;
+    successURL: string;
+    errorURL: string;
+  } | null> {
     const dbClient = this.dynamoDbService.getClient();
 
     const queueURLQuery = await dbClient
@@ -29,17 +31,24 @@ export class QueueRepository {
         ExpressionAttributeValues: {
           ':queueToken': token,
         },
-        ProjectionExpression: 'queueURL, userId',
+        ProjectionExpression: 'queueURL, userId, successURL, errorURL',
       })
       .promise();
 
     if (!queueURLQuery.Items.length) return null;
 
-    const { userId: queueUserId, queueURL } = queueURLQuery.Items[0] ?? {};
+    const {
+      userId: queueUserId,
+      queueURL,
+      successURL,
+      errorURL,
+    } = queueURLQuery.Items[0] ?? {};
 
     return {
       queueURL,
       queueUserId,
+      errorURL,
+      successURL,
     };
   }
 

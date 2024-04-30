@@ -37,7 +37,7 @@ export class QueueKeyGuard implements CanActivate {
         throw new BadRequestException('Invalid queue token');
       }
 
-      const { queueURL, queueUserId } = queueData;
+      const { queueURL, queueUserId, errorURL, successURL } = queueData ?? {};
 
       if (queueUserId !== userId) {
         this.logger.warn(
@@ -49,6 +49,11 @@ export class QueueKeyGuard implements CanActivate {
         );
       }
 
+      request.body = {
+        ...request.body,
+        successURL,
+        errorURL,
+      };
       request['queueURL'] = queueURL;
       return true;
     } catch (error) {
