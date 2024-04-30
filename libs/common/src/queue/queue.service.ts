@@ -4,12 +4,19 @@ import {
   Logger,
 } from '@nestjs/common';
 import { QueueRepository } from './queue.repository';
-import { SaveQueueArgs } from './types';
+import { CreateQueueArgs, SaveQueueArgs } from './types';
 import { SQSService } from '../aws';
-import { CreateQueueArgs } from '../constants/types';
 import { UtilsService } from '../utils';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
+import { SendMessageCommandOutput } from '@aws-sdk/client-sqs';
+
+export type PublishToEventsQueue = {
+  correlationId: string;
+  userId: string;
+  queueToken: string;
+  clientMessage: unknown;
+};
 
 @Injectable()
 export class QueueService {
@@ -38,12 +45,7 @@ export class QueueService {
 
   async createQueue(queuePayload: CreateQueueArgs) {
     try {
-      const responseAwsQueue = await this.sqsService.createQueue({
-        QueueName: queuePayload.QueueName,
-        tags: queuePayload.tags,
-        Attributes: queuePayload.Attributes,
-      });
-
+      const responseAwsQueue = await this.sqsService.createQueue(queuePayload);
       const queueToken = this.utilsService.generateQueueToken();
 
       await this.queueRepository.saveQueueTokens({
@@ -51,6 +53,8 @@ export class QueueService {
         queueToken,
         queueURL: responseAwsQueue.QueueUrl,
         userId: queuePayload.userId,
+        errorURL: queuePayload.errorURL,
+        successURL: queuePayload.successURL,
       });
 
       return {
@@ -59,17 +63,18 @@ export class QueueService {
       };
     } catch (error) {
       if (error.name === 'AWS.SimpleQueueService.QueueNameExists') {
-        this.logger.warn(`Queue ${queuePayload.QueueName} already exists.`);
+        this.logger.warn(`Queue ${queuePayload.queueName} already exists.`);
         return null;
       }
 
       this.logger.error(`Failed to create queue`);
-      console.error(error);
+      this.logger.error(error);
+      this.logger.error(JSON.stringify(error));
       throw new InternalServerErrorException('Failed to create queue');
     }
   }
 
-  async sendMessage(message: any): Promise<void> {
+  async sendMessage(message: any): Promise<SendMessageCommandOutput> {
     try {
       const eventsQueueURL = this.configService.get<string>(
         'AWS_SQS_EVENTS_QUEUE_URL',
@@ -78,7 +83,8 @@ export class QueueService {
         eventsQueueURL,
         JSON.stringify(message),
       );
-      console.log('responseSQS', responseSQS);
+
+      return responseSQS;
     } catch (error) {
       this.logger.error(
         `Failed to publish to events queue message ${JSON.stringify(message)}`,
@@ -104,6 +110,28 @@ export class QueueService {
       this.logger.error(JSON.stringify(error));
 
       throw new InternalServerErrorException();
+    }
+  }
+
+  async publishToEventsQueue(
+    clientMessage: PublishToEventsQueue,
+  ): Promise<boolean> {
+    try {
+      const responesSQS = await this.sendMessage(clientMessage);
+
+      console.log('responesSQS', responesSQS);
+
+      return !!responesSQS;
+    } catch (error) {
+      this.logger.error(
+        `Failed to publish message for userId ${
+          clientMessage.userId
+        }; message ${JSON.stringify(clientMessage)}`,
+      );
+      this.logger.error(error);
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException('Failed to process your request');
     }
   }
 }
