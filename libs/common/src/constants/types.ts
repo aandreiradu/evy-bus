@@ -5,9 +5,11 @@ export interface AuthenticatedRequest extends Request {
   queueURL: string;
 }
 
-export interface CreateQueueArgs extends AWS.SQS.Types.CreateQueueRequest {
-  userId: string;
-}
+// export interface CreateQueueArgs extends AWS.SQS.Types.CreateQueueRequest {
+//   userId: string;
+//   // successURL: string;
+//   // errorURL: string;
+// }
 
 export type QueueToken = {
   queueURL: string;

@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { SQS } from 'aws-sdk';
 import {
   CreateQueueCommand,
+  DeleteQueueCommand,
   GetQueueAttributesCommand,
   QueueAttributeName,
   SQSClient,
@@ -16,6 +17,7 @@ import {
   SendMessageRequest,
 } from '@aws-sdk/client-sqs';
 import { AWS_EVENT_TYPES } from '../eventTypes';
+import { CreateQueueArgs } from '@app/common/queue/types';
 
 @Injectable()
 export class SQSService {
@@ -51,21 +53,25 @@ export class SQSService {
     }
   }
 
-  async createQueue(queuePayload: AWS.SQS.Types.CreateQueueRequest) {
+  async createQueue(queuePayload: CreateQueueArgs) {
+    let generatedDLQURL = null;
     try {
       const maxReceiveCount = +queuePayload?.Attributes?.maxReceiveCount || 5;
-      const dlqURL = await this.createDLQ(queuePayload.QueueName + 'DLQ');
+      const dlqURL = await this.createDLQ(queuePayload.queueName + 'DLQ');
 
       if (!dlqURL) {
         throw new InternalServerErrorException('Failed to create DLQ');
       }
+
+      console.warn('Successfully created DLQ');
+      generatedDLQURL = dlqURL;
 
       const dlqAttributes = await this.getQueueAttributesByURL(dlqURL);
 
       const { QueueArn: DLQArn } = dlqAttributes.Attributes;
 
       const createQueuePayload = new CreateQueueCommand({
-        ...queuePayload,
+        QueueName: queuePayload.queueName,
         Attributes: {
           ReceiveMessageWaitTimeSeconds: '20', // enable long-pooling by default
           RedrivePolicy: JSON.stringify({
@@ -80,8 +86,16 @@ export class SQSService {
 
       return responseAws;
     } catch (error) {
-      this.logger.error(`Failed to create queue ${queuePayload.QueueName}`);
+      this.logger.error(`Failed to create queue ${queuePayload.queueName}`);
+      this.logger.error(error);
       this.logger.error(JSON.stringify(error));
+
+      if (generatedDLQURL) {
+        await this.deleteQueueByURL(generatedDLQURL);
+        this.logger.log(
+          `Successfully deleted DLQ for queue ${generatedDLQURL}`,
+        );
+      }
 
       throw new InternalServerErrorException('Failed to create queue');
     }
@@ -297,6 +311,23 @@ export class SQSService {
       this.logger.error(`Failed to get queue URL for queue ${queueName}`);
       this.logger.error(JSON.stringify(error));
       throw new InternalServerErrorException();
+    }
+  }
+
+  async deleteQueueByURL(queueURL: string): Promise<void> {
+    try {
+      const deleteQueueParams = new DeleteQueueCommand({
+        QueueUrl: queueURL,
+      });
+
+      const client = this.getClient();
+      await client.send(deleteQueueParams);
+    } catch (error) {
+      this.logger.error(`Failed to delete queue with URL ${queueURL}`);
+      this.logger.error(error);
+      this.logger.error(JSON.stringify(error));
+
+      throw new InternalServerErrorException('Failed to delete queue');
     }
   }
 }
