@@ -74,7 +74,9 @@ export class QueueService {
     }
   }
 
-  async sendMessage(message: any): Promise<SendMessageCommandOutput> {
+  async sendMessageEventsQueue(
+    message: PublishToEventsQueue,
+  ): Promise<SendMessageCommandOutput> {
     try {
       const eventsQueueURL = this.configService.get<string>(
         'AWS_SQS_EVENTS_QUEUE_URL',
@@ -110,28 +112,6 @@ export class QueueService {
       this.logger.error(JSON.stringify(error));
 
       throw new InternalServerErrorException();
-    }
-  }
-
-  async publishToEventsQueue(
-    clientMessage: PublishToEventsQueue,
-  ): Promise<boolean> {
-    try {
-      const responesSQS = await this.sendMessage(clientMessage);
-
-      console.log('responesSQS', responesSQS);
-
-      return !!responesSQS;
-    } catch (error) {
-      this.logger.error(
-        `Failed to publish message for userId ${
-          clientMessage.userId
-        }; message ${JSON.stringify(clientMessage)}`,
-      );
-      this.logger.error(error);
-      this.logger.error(JSON.stringify(error));
-
-      throw new InternalServerErrorException('Failed to process your request');
     }
   }
 }

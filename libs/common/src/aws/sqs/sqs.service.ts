@@ -169,7 +169,6 @@ export class SQSService {
     try {
       const commandPayload: SendMessageRequest = {
         QueueUrl: queueURL,
-        DelaySeconds: 10,
         MessageBody: JSON.stringify(message),
       };
 
