@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { GatewayController } from './gateway.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { LoggerModule } from 'nestjs-pino';
 import { SQSService } from '@app/common/aws';
 import { GatewayEventsConsumer } from './gateway.consumer';
 import { SqsModule } from '@ssut/nestjs-sqs';
@@ -11,7 +10,6 @@ import { QueueService } from '@app/common/queue/queue.service';
 import { QueueRepository } from '@app/common/queue/queue.repository';
 @Module({
   imports: [
-    LoggerModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),

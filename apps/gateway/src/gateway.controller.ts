@@ -8,7 +8,7 @@ import {
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
-import { AccessTokenGuard } from '@app/common/guards';
+import { AccessTokenGuard, QueueKeyGuard } from '@app/common/guards';
 import { v4 as uuidv4 } from 'uuid';
 import {
   createUserSchema,
@@ -67,7 +67,9 @@ export class GatewayController {
   ) {
     const createQueueResponse = await this.queueService.createQueue({
       userId: req['userId'],
-      QueueName: createQueueDTO['QueueName'],
+      queueName: createQueueDTO.queueName,
+      successURL: createQueueDTO.successURL,
+      errorURL: createQueueDTO.errorURL,
     });
 
     if (!createQueueResponse.isSuccess) {
@@ -81,16 +83,32 @@ export class GatewayController {
   }
 
   @Post('send-message')
-  async sendMessage(@Body() payload: any) {
+  // @UseGuards(AccessTokenGuard, QueueKeyGuard)
+  @UseGuards(AccessTokenGuard)
+  async sendMessage(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: unknown,
+  ) {
     const CID = uuidv4();
 
-    await this.queueService.publishToEventsQueue({
-      ...payload,
-      CorrelationId: CID,
+    //V1
+    // await this.queueService.sendMessage({
+    //   ...Object(body),
+    //   queueURL: request.queueURL,
+    //   userId: request.userId,
+    // });
+
+    //V2
+    await this.queueService.sendMessageEventsQueue({
+      correlationId: CID,
+      userId: request.userId,
+      queueToken: request?.body?.token ?? null,
+      clientMessage: body,
     });
 
     return {
-      message: 'Message received successfully',
+      message: 'Message received',
+      CID,
     };
   }
 }
