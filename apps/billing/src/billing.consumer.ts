@@ -16,7 +16,8 @@ export class BillingConsumer {
   @SqsMessageHandler('billing', false)
   async handleBillingMessages(message: AWS.SQS.Message) {
     try {
-      const messageDetails = JSON.parse(message.Body);
+      this.logger.log('billing message', message);
+      const messageDetails = JSON.parse(JSON.stringify(message.Body));
       const messageBody = JSON.parse(messageDetails) as BillingMessage;
 
       await this.billingService.registerPayment(messageBody);
