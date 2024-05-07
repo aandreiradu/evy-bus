@@ -4,19 +4,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import { QueueRepository } from './queue.repository';
-import { CreateQueueArgs, SaveQueueArgs } from './types';
 import { SQSService } from '../aws';
 import { UtilsService } from '../utils';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { SendMessageCommandOutput } from '@aws-sdk/client-sqs';
-
-export type PublishToEventsQueue = {
-  correlationId: string;
-  userId: string;
-  queueToken: string;
-  clientMessage: unknown;
-};
+import {
+  CreateQueueArgs,
+  PublishToEventsQueue,
+  SaveQueueArgs,
+} from '../constants/types';
 
 @Injectable()
 export class QueueService {

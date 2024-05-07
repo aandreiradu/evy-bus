@@ -2,19 +2,19 @@ import { Module } from '@nestjs/common';
 import { GatewayController } from './gateway.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SQSService } from '@app/common/aws';
-import { GatewayEventsConsumer } from './gateway.consumer';
+import { GatewayEventsConsumer } from './events.consumer';
 import { SqsModule } from '@ssut/nestjs-sqs';
 import { AuthModule } from 'apps/auth/src/auth.module';
 import { UtilsService } from '@app/common/utils';
 import { QueueService } from '@app/common/queue/queue.service';
 import { QueueRepository } from '@app/common/queue/queue.repository';
+import { BillingModule } from 'apps/billing/src/billing.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     SqsModule.registerAsync({
-      imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         return {
           producers: [],
@@ -36,6 +36,7 @@ import { QueueRepository } from '@app/common/queue/queue.repository';
       inject: [ConfigService],
     }),
     AuthModule,
+    BillingModule,
   ],
   controllers: [GatewayController],
   providers: [

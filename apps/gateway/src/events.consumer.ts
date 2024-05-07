@@ -1,8 +1,9 @@
 import { SQSService } from '@app/common/aws';
 import {
+  EventQueueMessage,
   PublishToEventsQueue,
-  QueueService,
-} from '@app/common/queue/queue.service';
+} from '@app/common/constants/types';
+import { QueueService } from '@app/common/queue/queue.service';
 import {
   Injectable,
   InternalServerErrorException,
@@ -74,7 +75,7 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
         return true;
       }
 
-      const messagePayload = {
+      const messagePayload: EventQueueMessage = {
         correlationId: messageBody.correlationId,
         userId: messageBody.userId,
         clientMessage: messageBody.clientMessage,
@@ -82,7 +83,10 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
         successURL,
       };
 
-      await this.sqsService.sendMessage(queueURL, messagePayload);
+      await this.sqsService.sendMessage(
+        queueURL,
+        JSON.stringify(messagePayload),
+      );
 
       console.log(
         `Successfully published the message to this queue ${queueURL}`,

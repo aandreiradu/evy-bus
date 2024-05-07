@@ -8,7 +8,7 @@ import {
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
-import { AccessTokenGuard, QueueKeyGuard } from '@app/common/guards';
+import { AccessTokenGuard } from '@app/common/guards';
 import { v4 as uuidv4 } from 'uuid';
 import {
   createUserSchema,

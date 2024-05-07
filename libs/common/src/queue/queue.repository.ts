@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SaveQueueArgs } from './types';
 import { DynamoDBService } from '../aws/dynamodb/dynamodb.service';
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
+import { SaveQueueArgs } from '../constants/types';
 
 @Injectable()
 export class QueueRepository {

@@ -16,8 +16,8 @@ import {
   SendMessageCommand,
   SendMessageRequest,
 } from '@aws-sdk/client-sqs';
+import { CreateQueueArgs } from '@app/common/constants/types';
 import { AWS_EVENT_TYPES } from '../eventTypes';
-import { CreateQueueArgs } from '@app/common/queue/types';
 
 @Injectable()
 export class SQSService {
@@ -29,10 +29,12 @@ export class SQSService {
   constructor(private readonly configService: ConfigService) {
     if (!this.sqsClient) this.sqsClient = this.getClient();
 
-    this.sqs = new SQS({
-      region: 'eu-central-1',
-      endpoint: 'http://localhost:4566',
-    });
+    if (this.configService.get('NODE_ENV') !== 'production') {
+      this.sqs = new SQS({
+        region: 'eu-central-1',
+        endpoint: 'http://localhost:4566',
+      });
+    }
   }
 
   async createDLQ(queueName: string) {
