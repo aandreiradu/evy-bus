@@ -102,6 +102,14 @@ QUEUE_EVENTS_DLQ_ARN=$(guess_queue_arn_from_name events-dlq)
 QUEUE_EVENTS_URL=$(create_queue events $QUEUE_EVENTS_DLQ_ARN)
 QUEUE_EVENTS_ARN=$(guess_queue_arn_from_name events)
 
+echo "Creating billing queue"
+BILLING_QUEUE_DLQ_URL=$(create_dead_letter_queue billing-dlq)
+BILLING_QUEUE_DLQ_ARN=$(guess_queue_arn_from_name billing-dlq)
+
+BILLING_QUEUE_URL=$(create_queue billing $BILLING_QUEUE_DLQ_ARN)
+BILLING_QUEUE_ARN=$(guess_queue_arn_from_name billing)
+
+
 
 echo "Creating tables"
 
@@ -117,3 +125,9 @@ QUEUE_KEYS_TABLE_URL=$(create_dynamodb_table queues)
 echo "Creating Queue keys secondary index"
 KEY_IDX1=$(create_dynamo_secondary_index queues queueToken)
 
+
+echo "Creating billing table"
+BILLING_TABLE_URL=$(create_dynamodb_table billing)
+
+echo "Creating billing secondary index"
+BILLING_SEC_IDX=$(create_dynamo_secondary_index billing userId)
