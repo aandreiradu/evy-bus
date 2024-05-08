@@ -108,7 +108,7 @@ export class GatewayController {
 
     return {
       message: 'Message received',
-      CID,
+      correlationId: CID,
     };
   }
 }

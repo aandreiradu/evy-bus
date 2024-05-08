@@ -19,7 +19,7 @@ create_topic() {
 create_queue() {
     local QUEUE_NAME_TO_CREATE=$1
     local QUEUE_DEAD_LETTERS_ARN=$2
-    awslocal --endpoint-url=http://${LOCALSTACK_HOST}:4566 sqs create-queue --queue-name ${QUEUE_NAME_TO_CREATE} --attributes "{\"RedrivePolicy\": \"{\\\"maxReceiveCount\\\":\\\"5\\\", \\\"deadLetterTargetArn\\\": \\\"${QUEUE_DEAD_LETTERS_ARN}\\\"}\"}" --output text
+    awslocal --endpoint-url=http://${LOCALSTACK_HOST}:4566 sqs create-queue --queue-name ${QUEUE_NAME_TO_CREATE} --attributes "{\"RedrivePolicy\": \"{\\\"maxReceiveCount\\\":\\\"2\\\", \\\"deadLetterTargetArn\\\": \\\"${QUEUE_DEAD_LETTERS_ARN}\\\"}\"}" --output text
 }
 
 create_dead_letter_queue() {

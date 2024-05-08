@@ -44,11 +44,91 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
     }
   }
 
+  //batch
+  // @SqsMessageHandler('events', true)
+  // async handleMessages(message: AWS.SQS.Message[]) {
+  //   // this.logger.debug('batch len', message.length);
+  //   for (let i = 0; i < message.length; i++) {
+  //     try {
+  //       const messageDetails = JSON.parse(message[i].Body);
+  //       const messageBody = JSON.parse(messageDetails) as PublishToEventsQueue;
+
+  //       const queueData = await this.queueService.getQueueUrlByToken(
+  //         messageBody.queueToken,
+  //         messageBody.userId,
+  //       );
+
+  //       if (!queueData) {
+  //         this.logger.error(
+  //           `Invalid queue token ${messageBody.queueToken} userId ${
+  //             messageBody.userId
+  //           }; message ${JSON.stringify(messageBody)}`,
+  //         );
+  //         return true;
+  //       }
+
+  //       const { queueURL, queueUserId, errorURL, successURL } = queueData ?? {};
+
+  //       if (queueUserId !== messageBody.userId) {
+  //         this.logger.warn(
+  //           `UserId ${messageBody.userId} it's not authorized to push to the queue ${messageBody.queueToken}`,
+  //         );
+
+  //         return true;
+  //       }
+
+  //       const messagePayload: EventQueueMessage = {
+  //         correlationId: messageBody.correlationId,
+  //         userId: messageBody.userId,
+  //         clientMessage: messageBody.clientMessage,
+  //         errorURL,
+  //         successURL,
+  //       };
+
+  //       await this.sqsService.sendMessage(
+  //         queueURL,
+  //         JSON.stringify(messagePayload),
+  //       );
+
+  //       // this.logger.debug(`Count is ${this.count}`);
+
+  //       // console.log(
+  //       //   `Successfully published the message to this queue ${queueURL}`,
+  //       // );
+
+  //       return true;
+  //     } catch (error) {
+  //       this.logger.error(
+  //         `Failed to process message ${JSON.stringify(message)}`,
+  //       );
+  //       this.logger.error(error);
+  //       this.logger.error(JSON.stringify(error));
+
+  //       if (
+  //         this.maxRetryLimit ===
+  //         Number(message[i].Attributes?.ApproximateReceiveCount)
+  //       ) {
+  //         this.logger.warn(`Could not handle event message. Max retry reached`);
+  //         this.logger.debug(message);
+  //         this.logger.error(error);
+
+  //         /* send message to discord here */
+  //       } else {
+  //         this.logger.debug(
+  //           'Nu a ajuns la max, este =>',
+  //           Number(message[i].Attributes?.ApproximateReceiveCount),
+  //         );
+  //         throw new InternalServerErrorException('Failed to process message');
+  //       }
+  //     }
+  //   }
+  // }
+
+  //one-by-one
   @SqsMessageHandler('events', false)
-  async handleGatewayMessage(message: AWS.SQS.Message) {
+  async handleMessages(message: AWS.SQS.Message) {
     try {
       const messageDetails = JSON.parse(message.Body);
-      const messageAttributes = message.MessageAttributes;
       const messageBody = JSON.parse(messageDetails) as PublishToEventsQueue;
 
       const queueData = await this.queueService.getQueueUrlByToken(
@@ -88,17 +168,28 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
         JSON.stringify(messagePayload),
       );
 
-      console.log(
-        `Successfully published the message to this queue ${queueURL}`,
-      );
-
       return true;
     } catch (error) {
       this.logger.error(`Failed to process message ${JSON.stringify(message)}`);
       this.logger.error(error);
       this.logger.error(JSON.stringify(error));
 
-      throw new InternalServerErrorException('Failed to process message');
+      if (
+        this.maxRetryLimit ===
+        Number(message.Attributes?.ApproximateReceiveCount)
+      ) {
+        this.logger.warn(`Could not handle event message. Max retry reached`);
+        this.logger.debug(message);
+        this.logger.error(error);
+
+        /* send message to discord here */
+      } else {
+        this.logger.debug(
+          'Nu a ajuns la max, este =>',
+          Number(message.Attributes?.ApproximateReceiveCount),
+        );
+        throw new InternalServerErrorException('Failed to process message');
+      }
     }
   }
 }
