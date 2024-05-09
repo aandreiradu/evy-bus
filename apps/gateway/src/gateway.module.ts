@@ -9,6 +9,7 @@ import { UtilsService } from '@app/common/utils';
 import { QueueService } from '@app/common/queue/queue.service';
 import { QueueRepository } from '@app/common/queue/queue.repository';
 import { BillingModule } from 'apps/billing/src/billing.module';
+import { DiscordBotModule } from '@app/common/discord/discord.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,6 +38,7 @@ import { BillingModule } from 'apps/billing/src/billing.module';
     }),
     AuthModule,
     BillingModule,
+    DiscordBotModule,
   ],
   controllers: [GatewayController],
   providers: [
