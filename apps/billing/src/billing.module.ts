@@ -6,6 +6,7 @@ import { BillingRepository } from './billing.repository';
 import { BillingConsumer } from './billing.consumer';
 import { SqsModule } from '@ssut/nestjs-sqs';
 import { ConfigService } from '@nestjs/config';
+import { DiscordBotModule } from '@app/common/discord/discord.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ConfigService } from '@nestjs/config';
       },
       inject: [ConfigService],
     }),
+    DiscordBotModule,
   ],
   controllers: [],
   providers: [

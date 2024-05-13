@@ -10,6 +10,7 @@ import { BillingService } from './billing.service';
 import { SQSService } from '@app/common/aws';
 import { ConfigService } from '@nestjs/config';
 import { QueueAttributeMap } from 'aws-sdk/clients/sqs';
+import { BotGateway } from '@app/common/discord/discord.gateway';
 
 @Injectable()
 export class BillingConsumer implements OnApplicationBootstrap {
@@ -20,6 +21,7 @@ export class BillingConsumer implements OnApplicationBootstrap {
     private readonly configService: ConfigService,
     private readonly billingService: BillingService,
     private readonly sqsService: SQSService,
+    private readonly botGateway: BotGateway,
   ) {}
 
   async onApplicationBootstrap() {
@@ -74,6 +76,18 @@ export class BillingConsumer implements OnApplicationBootstrap {
         );
         this.logger.debug(message);
         this.logger.error(error);
+
+        await this.botGateway.sendMessage(
+          {
+            request: JSON.stringify(message),
+            details: {
+              error: error,
+              message: `Billing consumer could not process the message`,
+              timestamp: new Date().toISOString(),
+            },
+          },
+          'BILLING CONSUMER',
+        );
       }
 
       if (error instanceof InternalServerErrorException) throw error;
