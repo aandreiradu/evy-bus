@@ -5,8 +5,8 @@ import { APIEmbed, Client, TextChannel } from 'discord.js';
 
 type BotMessage = {
   request: string;
-  correlationId: string;
-  userId: string;
+  correlationId?: string;
+  userId?: string;
   details: Record<string, any>;
 };
 

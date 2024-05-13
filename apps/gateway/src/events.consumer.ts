@@ -3,6 +3,7 @@ import {
   EventQueueMessage,
   PublishToEventsQueue,
 } from '@app/common/constants/types';
+import { BotGateway } from '@app/common/discord/discord.gateway';
 import { QueueService } from '@app/common/queue/queue.service';
 import {
   Injectable,
@@ -21,6 +22,7 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
   constructor(
     private readonly sqsService: SQSService,
     private readonly queueService: QueueService,
+    private readonly botGateway: BotGateway,
   ) {}
 
   async onApplicationBootstrap() {
@@ -182,14 +184,20 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
         this.logger.debug(message);
         this.logger.error(error);
 
-        /* send message to discord here */
-      } else {
-        this.logger.debug(
-          'Nu a ajuns la max, este =>',
-          Number(message.Attributes?.ApproximateReceiveCount),
+        await this.botGateway.sendMessage(
+          {
+            request: JSON.stringify(message),
+            details: {
+              error: error,
+              message: `Events consumer could not process the message`,
+              timestamp: new Date().toISOString(),
+            },
+          },
+          'EVENTS CONSUMER',
         );
-        throw new InternalServerErrorException('Failed to process message');
       }
+
+      throw new InternalServerErrorException('Failed to process message');
     }
   }
 }
