@@ -5,12 +5,14 @@ import { AuthEventConsumer } from './consumers/auth.consumer';
 import { AuthRepository } from './auth.repository';
 import { DynamoDBService } from '@app/common/aws/dynamodb/dynamodb.service';
 import { JwtModule } from '@nestjs/jwt';
+import { DiscordBotModule } from '@app/common/discord/discord.module';
 
 @Module({
   imports: [
     JwtModule.register({
       global: true,
     }),
+    DiscordBotModule,
   ],
   providers: [
     AuthService,

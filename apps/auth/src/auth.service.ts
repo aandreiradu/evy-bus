@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { QueueToken } from '@app/common/constants/types';
+import { BotGateway } from '@app/common/discord/discord.gateway';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly authRepository: AuthRepository,
     private readonly jwtService: JwtService,
+    private readonly botGateway: BotGateway,
   ) {}
 
   async createUser(createUserDTO: CreateUserDTO) {
@@ -45,6 +47,17 @@ export class AuthService {
 
       this.logger.error(`Failed to create user ${createUserDTO.email}`);
       this.logger.error(JSON.stringify(error));
+
+      await this.botGateway.sendMessage(
+        {
+          details: {
+            exception: JSON.stringify(error),
+            timestamp: new Date().toISOString(),
+          },
+          request: JSON.stringify(createUserDTO),
+        },
+        'AUTH',
+      );
 
       throw new InternalServerErrorException('Failed to create user');
     }
@@ -86,6 +99,18 @@ export class AuthService {
         `Failed to get user by email ${authenticateUserDTO.email}`,
       );
       this.logger.error(error);
+
+      await this.botGateway.sendMessage(
+        {
+          details: {
+            error: error,
+            message: `Unable to authenticate user ${authenticateUserDTO.email}`,
+            timestamp: new Date().toISOString(),
+          },
+          request: JSON.stringify(authenticateUserDTO),
+        },
+        'AUTH',
+      );
 
       throw new InternalServerErrorException();
     }
