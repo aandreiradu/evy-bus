@@ -10,6 +10,7 @@ import { QueueService } from '@app/common/queue/queue.service';
 import { QueueRepository } from '@app/common/queue/queue.repository';
 import { BillingModule } from 'apps/billing/src/billing.module';
 import { DiscordBotModule } from '@app/common/discord/discord.module';
+import { WebhookSignature } from '@app/common/signatures/webhook-signature';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -47,6 +48,7 @@ import { DiscordBotModule } from '@app/common/discord/discord.module';
     UtilsService,
     QueueService,
     QueueRepository,
+    WebhookSignature,
   ],
 })
 export class GatewayModule {}

@@ -5,6 +5,7 @@ import {
 } from '@app/common/constants/types';
 import { BotGateway } from '@app/common/discord/discord.gateway';
 import { QueueService } from '@app/common/queue/queue.service';
+import { WebhookSignature } from '@app/common/signatures/webhook-signature';
 import {
   Injectable,
   InternalServerErrorException,
@@ -23,6 +24,7 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
     private readonly sqsService: SQSService,
     private readonly queueService: QueueService,
     private readonly botGateway: BotGateway,
+    private readonly webhookSignature: WebhookSignature,
   ) {}
 
   async onApplicationBootstrap() {
@@ -47,6 +49,7 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
   }
 
   //batch
+
   // @SqsMessageHandler('events', true)
   // async handleMessages(message: AWS.SQS.Message[]) {
   //   // this.logger.debug('batch len', message.length);
@@ -157,18 +160,34 @@ export class GatewayEventsConsumer implements OnApplicationBootstrap {
         return true;
       }
 
+      const webhookSignature = this.webhookSignature.generateWebhookSignature(
+        messageBody.queueToken,
+        JSON.stringify({
+          correlationId: messageBody.correlationId,
+          userId: messageBody.userId,
+          clientMessage: messageBody.clientMessage,
+          errorURL,
+          successURL,
+        }),
+      );
+
+      console.log({ webhookSignature });
+
       const messagePayload: EventQueueMessage = {
         correlationId: messageBody.correlationId,
         userId: messageBody.userId,
         clientMessage: messageBody.clientMessage,
         errorURL,
         successURL,
+        webhookSignature,
       };
 
-      await this.sqsService.sendMessage(
+      const responseEventsConsumer = await this.sqsService.sendMessage(
         queueURL,
         JSON.stringify(messagePayload),
       );
+
+      console.log('responseEventsConsumer', responseEventsConsumer);
 
       return true;
     } catch (error) {

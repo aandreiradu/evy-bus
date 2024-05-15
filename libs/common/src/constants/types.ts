@@ -64,4 +64,5 @@ export type EventQueueMessage = {
   clientMessage: Record<string, any>;
   successURL: string;
   errorURL: string;
+  webhookSignature: string;
 };
