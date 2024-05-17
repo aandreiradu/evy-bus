@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BillingRepository } from './billing.repository';
+import { BotGateway } from '@app/common/discord/discord.gateway';
 
 @Injectable()
 export class BillingService {
@@ -16,6 +17,7 @@ export class BillingService {
     private readonly billingRepository: BillingRepository,
     private readonly sqsService: SQSService,
     private readonly configService: ConfigService,
+    private readonly botGateway: BotGateway,
   ) {}
 
   async publishToBilling(message: BillingMessage) {
@@ -34,7 +36,17 @@ export class BillingService {
       this.logger.error(error);
       this.logger.error(JSON.stringify(error));
 
-      /* Here we need to raise some alerts discord/mails/sms,etc*/
+      await this.botGateway.sendMessage(
+        {
+          request: JSON.stringify(message),
+          details: {
+            message: 'Failed to send message to billing queue',
+            exception: JSON.stringify(error),
+            timestamp: new Date().toISOString(),
+          },
+        },
+        'BILLING_PUBLISH_MESSAGE',
+      );
     }
   }
 
@@ -47,6 +59,18 @@ export class BillingService {
       );
       this.logger.error(error);
       this.logger.error(JSON.stringify(error));
+
+      await this.botGateway.sendMessage(
+        {
+          request: JSON.stringify(message),
+          details: {
+            message: 'Failed to register payment',
+            exception: JSON.stringify(error),
+            timestamp: new Date().toISOString(),
+          },
+        },
+        'BILLING_REGISTER_PAYMENT',
+      );
 
       throw new InternalServerErrorException('Failed to register payment');
     }
